@@ -88,7 +88,7 @@ P.S. You can delete this when you're done too. It's your config now! :)
 -- See `:help mapleader`
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
-vim.g.maplocalleader = ' '
+vim.g.maplocalleader = ','
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
 vim.g.have_nerd_font = false
@@ -154,17 +154,25 @@ vim.opt.inccommand = 'split'
 vim.opt.cursorline = true
 
 -- Minimal number of screen lines to keep above and below the cursor.
-vim.opt.scrolloff = 10
+vim.opt.scrolloff = 5
 
 -- [[ Basic Keymaps ]]
+local keymap = vim.keymap.set
+local t_opts = { silent = true }
 --  See `:help vim.keymap.set()`
 
 -- Clear highlights on search when pressing <Esc> in normal mode
 --  See `:help hlsearch`
-vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
+keymap('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
 -- Diagnostic keymaps
-vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+keymap('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+
+-- Toggle between previous two tabs
+keymap('n', '<BS>', '<cmd>b#<CR>')
+
+-- Close a buffer but keep the window open
+keymap('n', '<leader>bd', '<cmd>bp<bar>sp<bar>bn<bar>bd<CR>', { desc = '[B]uffer [D]elete' })
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
@@ -172,22 +180,29 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 --
 -- NOTE: This won't work in all terminal emulators/tmux/etc. Try your own mapping
 -- or just use <C-\><C-n> to exit terminal mode
-vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
+keymap('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
 -- TIP: Disable arrow keys in normal mode
--- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
--- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
--- vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
--- vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
+-- keymap('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
+-- keymap('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
+-- keymap('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
+-- keymap('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
 
 -- Keybinds to make split navigation easier.
 --  Use CTRL+<hjkl> to switch between windows
 --
 --  See `:help wincmd` for a list of all window commands
-vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
-vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
-vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
-vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+keymap('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
+keymap('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
+keymap('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
+keymap('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+
+-- Terminal mode
+keymap('t', '<esc>', '<C-\\><C-N>', t_opts)
+keymap('t', '<C-h>', '<C-\\><C-N><C-w>h', t_opts)
+keymap('t', '<C-l>', '<C-\\><C-N><C-w>l', t_opts)
+keymap('t', '<C-j>', '<C-\\><C-N><C-w>j', t_opts)
+keymap('t', '<C-k>', '<C-\\><C-N><C-w>k', t_opts)
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
@@ -199,7 +214,7 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   desc = 'Highlight when yanking (copying) text',
   group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
   callback = function()
-    vim.highlight.on_yank()
+    vim.highlight.on_yank { timeout = 300 }
   end,
 })
 
@@ -447,6 +462,17 @@ require('lazy').setup({
       end, { desc = '[S]earch [N]eovim files' })
     end,
   },
+  -- Neogit
+  {
+    'NeogitOrg/neogit',
+    dependencies = {
+      'nvim-lua/plenary.nvim', -- required
+
+      -- Only one of these is needed.
+      'nvim-telescope/telescope.nvim', -- optional
+    },
+    config = true,
+  },
 
   -- LSP Plugins
   {
@@ -659,7 +685,8 @@ require('lazy').setup({
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
         -- clangd = {},
-        -- gopls = {},
+        gopls = {},
+        clojure_lsp = {},
         -- pyright = {},
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
@@ -757,6 +784,8 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
+        go = { 'gofmt' },
+        clojure = { 'cljfmt' },
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
         --
@@ -765,7 +794,6 @@ require('lazy').setup({
       },
     },
   },
-
   { -- Autocompletion
     'hrsh7th/nvim-cmp',
     event = 'InsertEnter',
@@ -883,7 +911,141 @@ require('lazy').setup({
       }
     end,
   },
+  { 'HiPhish/rainbow-delimiters.nvim', ft = { 'clojure' } },
+  {
+    'Olical/conjure',
+    ft = { 'clojure', 'fennel' }, -- etc
+    lazy = true,
+    init = function()
+      -- Set configuration options here
+      -- Uncomment this to get verbose logging to help diagnose internal Conjure issues
+      -- This is VERY helpful when reporting an issue with the project
+      -- vim.g["conjure#debug"] = true
+    end,
+    dependencies = { 'PaterJason/cmp-conjure' },
+  },
+  {
+    'PaterJason/cmp-conjure',
+    lazy = true,
+    config = function()
+      local cmp = require 'cmp'
+      local config = cmp.get_config()
+      table.insert(config.sources, { name = 'conjure' })
+      return cmp.setup(config)
+    end,
+  },
+  {
+    'https://github.com/julienvincent/nvim-paredit.git',
+    name = 'nvim-paredit',
+    config = function()
+      local paredit = require 'nvim-paredit'
+      local common = require 'nvim-paredit.utils.common'
+      local langs = require 'nvim-paredit.lang'
+      local clj = require 'nvim-paredit.treesitter.forms'
+      local ts = require 'nvim-treesitter.ts_utils'
 
+      local function enclosing_wrapper_maker(brackets, placement)
+        return function()
+          -- If the node is a "form", then treat it like an element: (|1 2 3) -> (| (1 2 3))
+          if clj.node_is_form(ts.get_node_at_cursor()) then
+            paredit.cursor.place_cursor(paredit.wrap.wrap_element_under_cursor(unpack(brackets)), { placement = placement, mode = 'insert' })
+          -- Otherwise, wrap the surrounding form: (1 2| 3) -> (| (1 2 3))
+          else
+            paredit.cursor.place_cursor(paredit.wrap.wrap_enclosing_form_under_cursor(unpack(brackets)), { placement = placement, mode = 'insert' })
+          end
+        end
+      end
+
+      local function wrapper_maker(brackets, placement)
+        return function()
+          paredit.cursor.place_cursor(paredit.wrap.wrap_element_under_cursor(unpack(brackets)), { placement = placement, mode = 'insert' })
+        end
+      end
+
+      local function move_in_list(placement, mode)
+        local lang = langs.get_language_api()
+        local current_element = paredit.wrap.find_element_under_cursor(lang)
+
+        if not current_element then
+          return
+        end
+
+        local use_direct_parent = common.is_whitespace_under_cursor(lang) or lang.node_is_comment(ts.get_node_at_cursor())
+
+        local form = paredit.wrap.find_form(current_element, lang)
+        if not use_direct_parent and form:type() ~= 'source' then
+          form = paredit.wrap.find_parend_form(current_element, lang)
+        end
+
+        return paredit.cursor.place_cursor(form, { placement = placement, mode = mode })
+      end
+
+      local function insert_in_list_head()
+        move_in_list('inner_start', 'insert')
+      end
+      local function insert_in_list_tail()
+        move_in_list('inner_end', 'insert')
+      end
+
+      paredit.setup {
+        use_default_keys = true,
+        filetypes = { 'clojure', 'scheme', 'lisp', 'fennel' },
+        cursor_behaviour = 'follow',
+        keys = {
+          -- Wrap enclosing form in given type, enter insert mode at start or end
+          ['<localleader>i'] = {
+            enclosing_wrapper_maker({ '( ', ')' }, 'inner_start'),
+            'Wrap form round, insert head',
+          },
+
+          ['<localleader>I'] = {
+            enclosing_wrapper_maker({ '(', ' )' }, 'inner_end'),
+            'Wrap form round, insert tail',
+          },
+
+          ['<localleader>['] = {
+            enclosing_wrapper_maker({ '[', ']' }, 'inner_start'),
+            'Wrap form square, insert head',
+          },
+
+          ['<localleader>]'] = {
+            enclosing_wrapper_maker({ '[', ']' }, 'inner_end'),
+            'Wrap form square, insert tail',
+          },
+
+          ['<localleader>{'] = {
+            enclosing_wrapper_maker({ '{', '}' }, 'inner_start'),
+            'Wrap form curly, insert head',
+          },
+
+          ['<localleader>}'] = {
+            enclosing_wrapper_maker({ '{', '}' }, 'inner_end'),
+            'Wrap form curly, insert tail',
+          },
+
+          -- Wrap current form in given type, enter insert mode at start or end
+          ['<localleader>w'] = {
+            wrapper_maker({ '(', ')' }, 'inner_start'),
+            'Wrap element insert head',
+          },
+
+          ['<localleader>W'] = {
+            wrapper_maker({ '(', ')' }, 'inner_end'),
+            'Wrap element insert tail',
+          },
+
+          ['<localleader>h'] = {
+            insert_in_list_head,
+            'Enter insert mode at head of current form',
+          },
+          ['<localleader>l'] = {
+            insert_in_list_tail,
+            'Enter insert mode at tail of current form',
+          },
+        },
+      }
+    end,
+  },
   { -- You can easily change to a different colorscheme.
     -- Change the name of the colorscheme plugin below, and then
     -- change the command in the config to whatever the name of that colorscheme is.
@@ -902,7 +1064,7 @@ require('lazy').setup({
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      vim.cmd.colorscheme 'tokyonight-storm'
     end,
   },
 
@@ -952,7 +1114,7 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
+      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'clojure', 'fennel' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -984,8 +1146,8 @@ require('lazy').setup({
   -- require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
-  -- require 'kickstart.plugins.autopairs',
-  -- require 'kickstart.plugins.neo-tree',
+  require 'kickstart.plugins.autopairs',
+  require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
